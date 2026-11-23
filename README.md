@@ -2,7 +2,7 @@
 
 Local-first, project-scoped memory for AI tools. Phase 2 is being built one task at a time; see [the task checklist](docs/plans/2026-11-18-phase-2.md) and [architecture](ARCHITECTURE.md).
 
-Tasks 1–2 provide package/configuration, SQLite initialization and persistent Git project resolution. MCP, memory writes/search and transcript discovery are not implemented yet. Runtime currently uses only Python's standard library and performs no model downloads or network calls.
+Tasks 1–3 provide package/configuration, SQLite initialization, persistent Git project resolution, strict contract preparation and source-privacy helpers. MCP, memory writes/search and transcript discovery are not implemented yet. Runtime uses local JSON Schema validation and ignore matching; it performs no model downloads or network calls.
 
 ## Development
 
@@ -50,3 +50,13 @@ Known GitHub/GitLab/Bitbucket HTTPS and conventional Git SSH origins share an id
 
 A changed established origin or conflicting aliases returns exit code 2 and `{"project_id":null,"resolution":"ambiguous","needs_review":true}` without changing project mappings. Removing origin preserves the common-directory mapping. A first unclaimed origin may be attached to a previously local-only project. Explicit remapping/merging is not implemented; no existing project history is silently moved. Invalid metadata produces a bounded error (exit 1), not a fallback to global.
 
+
+## Contract and privacy helpers (Task 3)
+
+`brain.contracts.schema_for(name, "Input" | "Output")` exports self-contained schemas for the five planned MCP tools and `/ingest`, packaged in `src/brain/contracts/v1.json`. The registry matches the research contract exactly. `prepare_input(name, bytes_or_dict)` is the future writer/transport boundary: bounded strict JSON, shape validation, copying/scrubbing and timestamp normalization, second validation, and cross-field checks. It rejects duplicate properties, nonfinite numbers, integer-valued floats in integer fields, unknown fields (including raw transcript/cookie fields), mismatched ingest provenance/project, inconsistent extraction state, invalid intervals and TaskState/BugFix identity mismatches. UTC timestamps require uppercase T/Z and at most microsecond precision; no naive/offset/leap-second values. Errors contain fixed summaries rather than submitted values. Authorization, database version checks, contradiction review and transaction semantics remain later tasks.
+
+Strings are scrubbed for common provider keys, AWS access identifiers, JWTs, Bearer headers, secret assignments, cookie headers, URL userinfo and PEM private-key blocks. Nested card content and source anchors are covered. Identity/control fields containing recognized secrets are rejected rather than renamed. Output validation rejects unsafe content instead of silently changing a previously budgeted result. **Redaction is best effort**, not proof of complete secret detection. No payload is persisted or logged by these helpers.
+
+`brain.privacy.SourcePolicy(explicit_root, exclusions=("private",))` takes a snapshot of the root `.memoryignore` (Git-style patterns), then provides `read_text(relative_or_absolute_path)`. It checks exclusions/ignored parents before opening source files, rejects paths outside the root and symlinks in the traversal, reads only bounded regular UTF-8 files, and returns scrubbed text. Built-in `.git/`, `.env`, `.env.*` and `.memoryignore` exclusions cannot be negated; directory exclusions cannot be bypassed by re-including a child. Recreate the policy when root ignore rules change; nested `.memoryignore` files are not loaded in v1. The default source-read cap is 256KiB (explicit maximum 1MiB), and root ignore files are limited to 64KiB. This is a Unix/Apple Silicon helper, not an OS sandbox against another process running as the same user.
+
+There is still no public memory-write command, watcher, HTTP endpoint or MCP server. Task 4 will connect prepared structured writes to the transactional ledger. JSON Schema and pathspec runtime dependencies are pinned in pyproject/uv.lock; no embedding or generative model dependencies are required for Task 3.

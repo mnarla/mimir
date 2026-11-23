@@ -8,13 +8,21 @@ version = "0.1.0"
 description = "Local-first project memory for AI tools"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "jsonschema==4.26.0",
+    "pathspec==1.1.1",
+]
 
 [project.scripts]
 brain = "brain.__main__:main"
 
 [dependency-groups]
-dev = ["ruff", "mypy", "bandit"]
+dev = [
+    "ruff",
+    "mypy",
+    "bandit",
+    "types-jsonschema>=4.26.0.20261006",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/brain"]
