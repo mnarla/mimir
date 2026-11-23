@@ -1,6 +1,6 @@
 # Local-first AI memory engine — implementation blueprint
 
-Phase 1 research completed 2026-11-17. The user authorized sequential Phase 2 implementation on 2026-11-18. This remains the target blueprint synthesized from four research passes; see [implementation tasks](docs/plans/2026-11-18-phase-2.md) for verified progress. Task 1 now provides package/configuration and SQLite bootstrap/migration only; MCP, memory-write/retrieval logic and browser capture are not implemented yet.
+Phase 1 research completed 2026-11-17. The user authorized sequential Phase 2 implementation on 2026-11-18. This remains the target blueprint synthesized from four research passes; see [implementation tasks](docs/plans/2026-11-18-phase-2.md) for verified progress. Tasks 1–2 now provide package/configuration, SQLite bootstrap/migration and Git project resolution; MCP, memory-write/retrieval logic and browser capture are not implemented yet.
 
 ## Decisions and evidence
 
