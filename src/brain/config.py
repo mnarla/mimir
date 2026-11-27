@@ -1,5 +1,6 @@
 """Small, strict local configuration; never echo submitted values in errors."""
 
+import re
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
@@ -14,22 +15,28 @@ class Settings:
     data_dir: Path
     busy_timeout_ms: int = 3000
     cache_kib: int = 8192
+    semantic_generation: str | None = None
+    semantic_model_dir: Path | None = None
 
 
 def load_config(config: Path | None = None, data_dir: Path | None = None) -> Settings:
     storage: dict[str, object] = {}
+    semantic: dict[str, object] = {}
     base = Path.cwd()
     if config is not None:
         try:
             parsed = tomllib.loads(config.read_text(encoding="utf-8"))
         except (OSError, ValueError) as exc:
             raise ConfigError("Cannot read valid TOML configuration") from exc
-        if set(parsed) - {"storage"}:
+        if set(parsed) - {"storage", "semantic"}:
             raise ConfigError("Unknown configuration section")
         candidate = parsed.get("storage", {})
         if not isinstance(candidate, dict):
             raise ConfigError("Storage configuration must be a table")
         storage = candidate
+        semantic = parsed.get("semantic", {})
+        if not isinstance(semantic, dict) or set(semantic) - {"generation_id", "model_dir"}:
+            raise ConfigError("Invalid semantic configuration")
         base = config.absolute().parent
     if set(storage) - {"data_dir", "busy_timeout_ms", "cache_kib"}:
         raise ConfigError("Unknown storage setting")
@@ -45,4 +52,18 @@ def load_config(config: Path | None = None, data_dir: Path | None = None) -> Set
     chosen = Path(raw_dir).expanduser() if data_dir is None else data_dir.expanduser()
     if not chosen.is_absolute():
         chosen = (base if data_dir is None else Path.cwd()) / chosen
-    return Settings(chosen.absolute(), timeout, cache)
+    generation = semantic.get("generation_id")
+    directory = semantic.get("model_dir")
+    if generation is None and directory is None:
+        return Settings(chosen.absolute(), timeout, cache)
+    if (
+        not isinstance(generation, str)
+        or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}", generation)
+        or not isinstance(directory, str)
+        or not directory.strip()
+    ):
+        raise ConfigError("Semantic generation and model directory are required together")
+    model_path = Path(directory).expanduser()
+    if not model_path.is_absolute():
+        model_path = base / model_path
+    return Settings(chosen.absolute(), timeout, cache, generation, model_path.absolute())

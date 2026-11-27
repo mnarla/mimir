@@ -16,6 +16,12 @@ dependencies = [
 [project.scripts]
 brain = "brain.__main__:main"
 
+[project.optional-dependencies]
+semantic = [
+    "fastembed==0.9.1",
+    "sqlite-vec==0.1.9",
+]
+
 [dependency-groups]
 dev = [
     "ruff",

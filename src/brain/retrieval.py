@@ -18,6 +18,7 @@ from brain.budget import (
     source_from,
 )
 from brain.contracts import prepare_input, validate_output
+from brain.embeddings import Embedder, load_vec, vector_blob
 
 TYPE_ORDER = ("Decision", "Constraint", "TaskState", "TechStack", "BugFix")
 
@@ -28,8 +29,9 @@ def search_memory(
     *,
     authorized_projects: Set[str],
     counter: TokenCounter | None = None,
+    embedder: Embedder | None = None,
 ) -> dict[str, Any]:
-    return _read(db, "search_memory", payload, authorized_projects, counter)
+    return _read(db, "search_memory", payload, authorized_projects, counter, embedder)
 
 
 def get_project_context(
@@ -38,8 +40,9 @@ def get_project_context(
     *,
     authorized_projects: Set[str],
     counter: TokenCounter | None = None,
+    embedder: Embedder | None = None,
 ) -> dict[str, Any]:
-    return _read(db, "get_project_context", payload, authorized_projects, counter)
+    return _read(db, "get_project_context", payload, authorized_projects, counter, embedder)
 
 
 def _read(
@@ -48,12 +51,31 @@ def _read(
     payload: object,
     allowed: Set[str],
     counter: TokenCounter | None,
+    embedder: Embedder | None,
 ) -> dict[str, Any]:
     request = prepare_input(name, payload, configured_tokenizer=counter is not None)
     scope = request["scope"]
     counter = counter if scope["tokenizer"] == "configured" else None
     projects = [scope["project_id"], *scope["additional_projects"]]
     authorize(projects, allowed)
+    if db.in_transaction:
+        raise ReadError("unavailable")
+    query_text = request.get("query", request.get("goal"))
+    query_blob = None
+    generation = embedder.generation if embedder else None
+    if embedder is not None and query_text is not None:
+        try:
+            configured = db.execute(
+                "SELECT id,model,artifact_digest,dimensions,normalization,"
+                "tokenizer_digest FROM embedding_generation WHERE id=? AND enabled=1",
+                (embedder.generation.id,),
+            ).fetchone()
+            if configured == embedder.generation.values() and load_vec(db):
+                query_blob = vector_blob(
+                    embedder.embed(query_text, query=True), embedder.generation.dimensions
+                )
+        except Exception:
+            query_blob = None
     with snapshot(db):
         upper = db.execute("SELECT coalesce(max(seq),0) FROM ledger_event").fetchone()[0]
         known = upper if scope["known_seq"] is None else scope["known_seq"]
@@ -136,12 +158,67 @@ def _read(
             ).fetchall()
             lexical = [row[0] for row in hits]
         scores: dict[str, float] = {}
-        capped = len(exact_rows) > 128 or len(lexical) > 128
+        semantic: list[str] = []
+        semantic_diagnostics = ["semantic_unavailable"]
+        generation_id = None
+        if query_blob is not None and generation is not None:
+            current = db.execute(
+                "SELECT id,model,artifact_digest,dimensions,normalization,"
+                "tokenizer_digest FROM embedding_generation WHERE id=? AND enabled=1",
+                (generation.id,),
+            ).fetchone()
+            if current == generation.values():
+                try:
+                    vectors = db.execute(
+                        "SELECT revision_id,embedding FROM revision_embedding "
+                        "WHERE generation_id=? AND dimensions=? "
+                        "AND revision_id IN (SELECT value FROM json_each(?))",
+                        (
+                            generation.id,
+                            generation.dimensions,
+                            canonical(sorted({row[1] for row in rows})).decode("utf-8"),
+                        ),
+                    ).fetchall()
+                    good = []
+                    import struct
+
+                    for revision, blob in vectors:
+                        try:
+                            vector_blob(
+                                list(struct.unpack("<" + "f" * generation.dimensions, blob)),
+                                generation.dimensions,
+                            )
+                            good.append(revision)
+                        except (ValueError, struct.error):
+                            continue
+                    hits = db.execute(
+                        "WITH eligible AS MATERIALIZED "
+                        "(SELECT value AS revision FROM json_each(?)) "
+                        "SELECT e.revision_id FROM eligible JOIN revision_embedding e "
+                        "ON e.revision_id=eligible.revision WHERE e.generation_id=? "
+                        "AND e.dimensions=? ORDER BY vec_distance_cosine(e.embedding,?),"
+                        "e.revision_id LIMIT 129",
+                        (
+                            canonical(good).decode("utf-8"),
+                            generation.id,
+                            generation.dimensions,
+                            query_blob,
+                        ),
+                    ).fetchall()
+                    semantic = [hit[0] for hit in hits]
+                    semantic_diagnostics = []
+                    generation_id = generation.id
+                    if len(good) < len({row[1] for row in rows}):
+                        semantic_diagnostics = ["semantic_partial", "index_lag"]
+                except sqlite3.Error:
+                    semantic_diagnostics = ["semantic_unavailable"]
+        capped = len(exact_rows) > 128 or len(lexical) > 128 or len(semantic) > 128
         exact_rows.sort(key=lambda row: row[1])
         exact_ids = {row[1] for row in exact_rows[:128]}
         for weight, channel in (
             (2, [row[1] for row in sorted(exact_rows, key=lambda row: row[1])][:128]),
             (1, lexical[:128]),
+            (1, semantic[:128]),
         ):
             for rank, revision in enumerate(channel, 1):
                 scores[revision] = scores.get(revision, 0) + weight / (60 + rank)
@@ -167,7 +244,7 @@ def _read(
                     row[1],
                 )
             )
-        diagnostics = ["semantic_unavailable"]
+        diagnostics = semantic_diagnostics
         if unknown:
             diagnostics.append("unknown_validity_excluded")
         if capped:
@@ -180,8 +257,8 @@ def _read(
             conflicts_omitted=len(warnings),
             diagnostics=diagnostics,
             budget=metadata(scope["token_budget"], counter),
-            embedding_generation=None,
-            ranking_version="lexical-v1",
+            embedding_generation=generation_id,
+            ranking_version="hybrid-v1" if generation_id else "lexical-v1",
         )
 
         def warning_state() -> None:

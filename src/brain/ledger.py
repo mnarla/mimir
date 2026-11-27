@@ -359,6 +359,13 @@ def _write(
         "SELECT 1 FROM work_item WHERE revision_id=? AND state IN ('pending','leased') LIMIT 1",
         (revision,),
     ).fetchone()
+    enabled = db.execute("SELECT count(*) FROM embedding_generation WHERE enabled=1").fetchone()[0]
+    indexed = db.execute(
+        "SELECT count(*) FROM revision_embedding e JOIN embedding_generation g "
+        "ON g.id=e.generation_id WHERE e.revision_id=? AND g.enabled=1 "
+        "AND e.dimensions=g.dimensions",
+        (revision,),
+    ).fetchone()[0]
     result = {
         "ok": True,
         "data": {
@@ -368,7 +375,9 @@ def _write(
             "ledger_seq": seq,
             "outcome": outcome,
             "conflict_id": conflict_id,
-            "index_state": "pending" if queued else "degraded",
+            "index_state": "pending"
+            if queued
+            else ("ready" if enabled and indexed == enabled else "degraded"),
         },
     }
     db.execute(

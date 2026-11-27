@@ -2,7 +2,7 @@
 
 Local-first, project-scoped memory for AI tools. Phase 2 is being built one task at a time; see [the task checklist](docs/plans/2026-11-18-phase-2.md) and [architecture](ARCHITECTURE.md).
 
-Tasks 1–5 provide package/configuration, SQLite initialization, persistent Git project resolution, strict contract/privacy helpers, an in-process transactional writer, lexical retrieval, history and conflict review. MCP, public memory commands, embeddings and transcript discovery are not implemented yet. Runtime uses local JSON Schema validation and ignore matching; it performs no model downloads or network calls.
+Tasks 1–6 provide package/configuration, SQLite initialization, persistent Git project resolution, strict contract/privacy helpers, an in-process transactional writer, retrieval/history/review and optional local embedding workers with hybrid search. MCP, public memory commands and transcript discovery are not implemented yet. Core operation requires no model; runtime performs no model downloads or network calls.
 
 ## Development
 
@@ -68,12 +68,30 @@ There is still no public memory-write command, watcher, HTTP endpoint or MCP ser
 
 Writes provide sanitized idempotent replay, exact-claim support provenance, expected-head checks, immutable assertions/events, ordered TaskState transitions with explicit reopening, and pending-review conflicts that preserve accepted state. Explicit forward-effective TechStack/BugFix replacements preserve earlier knowledge and valid-time prefixes. Differing claims, including set members, conservatively require review unless a safe automatic update applies. No semantic similarity or prose-equivalence inference is performed. See the Task 4 checkpoint for transition and provenance rules.
 
-FTS documents are updated in the same transaction. Optional embedding work is queued only for enabled generations; the default cap is 1000 pending/leased jobs. No model is downloaded or loaded. `index_state` reports `degraded` without semantic work and `pending` for queued work. Embedding worker behavior remains Task 6.
+FTS documents are updated in the same transaction. Optional embedding work is queued only for enabled generations; the default cap is 1000 pending/leased jobs. No model is downloaded or loaded by the writer. `index_state` reports `degraded` without semantic work, `pending` for queued work and `ready` when enabled generations have vectors. Task 6 provides the optional worker described below.
 
 ## Retrieval, history and review (Task 5)
 
 Python callers can use `brain.retrieval.search_memory` / `get_project_context`, `brain.history.get_history`, and `brain.review.resolve_conflict` with the packaged contract payloads. Reads require `authorized_projects`; review requires a trusted `principal_id` and separate `review_projects`. These capabilities must be derived from credentials by the future transport, not from untrusted request bodies.
 
-Retrieval combines exact identity and FTS keyword ranking within one authorized project/world-time/knowledge snapshot. Unknown validity is excluded with a diagnostic. Pending conflicts warn and withhold affected streams until review. No-goal context has deterministic type priorities. Semantic search currently reports `semantic_unavailable`. Queries have bounded candidate counts, eligible scans and SQL deadlines.
+Retrieval combines exact identity and FTS keyword ranking within one authorized project/world-time/knowledge snapshot. Unknown validity is excluded with a diagnostic. Pending conflicts warn and withhold affected streams until review. No-goal context has deterministic type priorities. Without a working optional semantic channel, search reports `semantic_unavailable`. Queries have bounded candidate counts, eligible scans and SQL deadlines.
 
 Responses pack whole items with provenance within a canonical data JSON budget, including warning metadata and the count itself. The default `utf8_bytes` counter reports a UTF-8 upper bound, not measured host tokens; a trusted pinned `TokenCounter` can supply configured counts. History pins its upper sequence and stops at the first event that cannot fit, preserving continuation order. Review supports keeping the accepted assertion, accepting a candidate at an effective boundary, or explicit compatible coexistence. Review uses version checks, idempotent receipts and atomic temporal projection updates. See the Task 5 checkpoint for bounds and validation evidence.
+
+## Optional semantic channel (Task 6)
+
+`uv sync --extra semantic` installs pinned FastEmbed/sqlite-vec packages, without provisioning any model. Native cosine needs a Python build with SQLite extension loading; the current system Python 3.12 lacks it and safely returns lexical results. Native cosine was verified using the existing Homebrew Python 3.14 and synthetic vectors. Real model RSS, latency and inference quality remain unmeasured.
+
+Python callers explicitly register a `brain.embeddings.Generation` using `brain.worker.register_generation`, queue existing revisions through bounded `backfill`, and call `run_once(connection, shared_embedder)` to process one job. New writes enqueue generation-specific jobs automatically. The worker uses expiring leases, bounded retries and stale-result checks; vectors and job completion commit together. No daemon or public worker command is started.
+
+`LocalEmbedder(generation, directory, manifest)` requires manually provisioned, trusted model artifacts. The manifest maps relative filenames to SHA256 digests; generation.artifact_digest is the SHA256 of canonical manifest JSON and tokenizer_digest matches tokenizer.json. The supported default is BAAI/bge-small-en-v1.5, 384 unit-normalized dimensions, with model_optimized.onnx and tokenizer/config files. All directory files must be verified. One lazy process-wide FastEmbed session uses the explicit local path, local_files_only and one CPU thread. No automatic model download or paid fallback exists. Real model validation requires a separately authorized provisioning/integration run.
+
+Search/context functions accept `embedder=shared_embedder`. Exact identity, keyword and filtered scalar-cosine channels fuse deterministically; unavailable semantics retain lexical/exact results with diagnostics, and partial indexing reports semantic_partial/index_lag. No-goal context skips inference. Semantic configuration is optional and requires both fields; it records the service's intended settings without constructing a model:
+
+```toml
+[semantic]
+generation_id = "bge-small-v1"
+model_dir = "./models/bge-small"
+```
+
+Run model-free semantic fixtures with `uv run python -m unittest discover -s tests -p test_semantic.py -v`. Native cases skip when extension loading is unavailable. Generation registration, backfill and model construction are trusted local administration APIs; transport authentication remains Task 7.
