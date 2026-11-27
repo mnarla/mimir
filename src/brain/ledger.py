@@ -202,6 +202,12 @@ def _write(
         else:
             seq, outcome = event("support", revision), "supported"
             relation(seq, revision, "supported_by", "source", source_ref)
+            db.execute(
+                "UPDATE conflict_head SET head_seq=? WHERE project_id=? "
+                "AND status='pending_review' AND "
+                "(candidate_revision_id=? OR accepted_revision_id=?)",
+                (seq, project, revision, revision),
+            )
         pending = db.execute(
             "SELECT id FROM conflict_head WHERE candidate_revision_id=? "
             "AND status='pending_review'",

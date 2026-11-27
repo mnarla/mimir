@@ -2,7 +2,7 @@
 
 Local-first, project-scoped memory for AI tools. Phase 2 is being built one task at a time; see [the task checklist](docs/plans/2026-11-18-phase-2.md) and [architecture](ARCHITECTURE.md).
 
-Tasks 1–4 provide package/configuration, SQLite initialization, persistent Git project resolution, strict contract/privacy helpers and an in-process transactional structured-memory writer. MCP, public memory commands, retrieval and transcript discovery are not implemented yet. Runtime uses local JSON Schema validation and ignore matching; it performs no model downloads or network calls.
+Tasks 1–5 provide package/configuration, SQLite initialization, persistent Git project resolution, strict contract/privacy helpers, an in-process transactional writer, lexical retrieval, history and conflict review. MCP, public memory commands, embeddings and transcript discovery are not implemented yet. Runtime uses local JSON Schema validation and ignore matching; it performs no model downloads or network calls.
 
 ## Development
 
@@ -68,4 +68,12 @@ There is still no public memory-write command, watcher, HTTP endpoint or MCP ser
 
 Writes provide sanitized idempotent replay, exact-claim support provenance, expected-head checks, immutable assertions/events, ordered TaskState transitions with explicit reopening, and pending-review conflicts that preserve accepted state. Explicit forward-effective TechStack/BugFix replacements preserve earlier knowledge and valid-time prefixes. Differing claims, including set members, conservatively require review unless a safe automatic update applies. No semantic similarity or prose-equivalence inference is performed. See the Task 4 checkpoint for transition and provenance rules.
 
-FTS documents are updated in the same transaction. Optional embedding work is queued only for enabled generations; the default cap is 1000 pending/leased jobs. No model is downloaded or loaded. `index_state` reports `degraded` without semantic work and `pending` for queued work. Retrieval/history/review and worker behavior remain later tasks.
+FTS documents are updated in the same transaction. Optional embedding work is queued only for enabled generations; the default cap is 1000 pending/leased jobs. No model is downloaded or loaded. `index_state` reports `degraded` without semantic work and `pending` for queued work. Embedding worker behavior remains Task 6.
+
+## Retrieval, history and review (Task 5)
+
+Python callers can use `brain.retrieval.search_memory` / `get_project_context`, `brain.history.get_history`, and `brain.review.resolve_conflict` with the packaged contract payloads. Reads require `authorized_projects`; review requires a trusted `principal_id` and separate `review_projects`. These capabilities must be derived from credentials by the future transport, not from untrusted request bodies.
+
+Retrieval combines exact identity and FTS keyword ranking within one authorized project/world-time/knowledge snapshot. Unknown validity is excluded with a diagnostic. Pending conflicts warn and withhold affected streams until review. No-goal context has deterministic type priorities. Semantic search currently reports `semantic_unavailable`. Queries have bounded candidate counts, eligible scans and SQL deadlines.
+
+Responses pack whole items with provenance within a canonical data JSON budget, including warning metadata and the count itself. The default `utf8_bytes` counter reports a UTF-8 upper bound, not measured host tokens; a trusted pinned `TokenCounter` can supply configured counts. History pins its upper sequence and stops at the first event that cannot fit, preserving continuation order. Review supports keeping the accepted assertion, accepting a candidate at an effective boundary, or explicit compatible coexistence. Review uses version checks, idempotent receipts and atomic temporal projection updates. See the Task 5 checkpoint for bounds and validation evidence.
