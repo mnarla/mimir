@@ -25,7 +25,7 @@ def _prepare_storage(data_dir: Path) -> Path:
     info = data_dir.stat()
     if not stat.S_ISDIR(info.st_mode) or info.st_uid != os.getuid():
         raise DatabaseError("Data directory must be owned by the current user")
-    allowed = {"memory.sqlite", "memory.sqlite-wal", "memory.sqlite-shm"}
+    allowed = {"memory.sqlite", "memory.sqlite-wal", "memory.sqlite-shm", "service.lock"}
     if any(p.name not in allowed for p in data_dir.iterdir()):
         raise DatabaseError("Use a dedicated memory data directory")
     for name in allowed:
@@ -91,19 +91,11 @@ def initialize_database(
     data_dir: Path, *, busy_timeout_ms: int = 3000, cache_kib: int = 8192
 ) -> sqlite3.Connection:
     """Return a configured connection owned by the caller; no models/extensions loaded."""
-    if type(busy_timeout_ms) is not int or not 0 <= busy_timeout_ms <= 30000:
-        raise DatabaseError("Invalid busy timeout")
-    if type(cache_kib) is not int or not 256 <= cache_kib <= 16384:
-        raise DatabaseError("Invalid cache size")
+    _validate_connection_settings(busy_timeout_ms, cache_kib)
     connection: sqlite3.Connection | None = None
     try:
-        database = _prepare_storage(data_dir)
-        connection = sqlite3.connect(database, timeout=busy_timeout_ms / 1000)
-        connection.execute("PRAGMA foreign_keys=ON")
-        connection.execute("PRAGMA recursive_triggers=ON")
-        connection.execute(f"PRAGMA busy_timeout={busy_timeout_ms}")
-        connection.execute(f"PRAGMA cache_size={-cache_kib}")
-        connection.execute("PRAGMA synchronous=FULL")
+        _prepare_storage(data_dir)
+        connection = open_database(data_dir, busy_timeout_ms=busy_timeout_ms, cache_kib=cache_kib)
         if connection.execute("PRAGMA journal_mode=WAL").fetchone()[0] != "wal":
             raise DatabaseError("SQLite WAL mode is unavailable")
         _migrate(connection)
@@ -114,6 +106,35 @@ def initialize_database(
         if isinstance(exc, DatabaseError):
             raise
         raise DatabaseError("Cannot initialize the local database") from exc
+
+
+def open_database(
+    data_dir: Path, *, busy_timeout_ms: int = 3000, cache_kib: int = 8192
+) -> sqlite3.Connection:
+    """Open a previously initialized private store without reacquiring the migration lock."""
+    _validate_connection_settings(busy_timeout_ms, cache_kib)
+    path = data_dir / "memory.sqlite"
+    if path.is_symlink():
+        raise DatabaseError("SQLite files must not be symlinks")
+    database = path.absolute().as_uri()
+    connection = sqlite3.connect(database + "?mode=rw", uri=True, timeout=busy_timeout_ms / 1000)
+    try:
+        connection.execute("PRAGMA foreign_keys=ON")
+        connection.execute("PRAGMA recursive_triggers=ON")
+        connection.execute(f"PRAGMA busy_timeout={busy_timeout_ms}")
+        connection.execute(f"PRAGMA cache_size={-cache_kib}")
+        connection.execute("PRAGMA synchronous=FULL")
+        return connection
+    except BaseException:
+        connection.close()
+        raise
+
+
+def _validate_connection_settings(busy_timeout_ms: int, cache_kib: int) -> None:
+    if type(busy_timeout_ms) is not int or not 0 <= busy_timeout_ms <= 30000:
+        raise DatabaseError("Invalid busy timeout")
+    if type(cache_kib) is not int or not 256 <= cache_kib <= 16384:
+        raise DatabaseError("Invalid cache size")
 
 
 def initialize(settings: Settings) -> None:

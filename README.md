@@ -2,7 +2,7 @@
 
 Local-first, project-scoped memory for AI tools. Phase 2 is being built one task at a time; see [the task checklist](docs/plans/2026-11-18-phase-2.md) and [architecture](ARCHITECTURE.md).
 
-Tasks 1–6 provide package/configuration, SQLite initialization, persistent Git project resolution, strict contract/privacy helpers, an in-process transactional writer, retrieval/history/review and optional local embedding workers with hybrid search. MCP, public memory commands and transcript discovery are not implemented yet. Core operation requires no model; runtime performs no model downloads or network calls.
+Brain provides private SQLite storage, persistent Git project identity, structured memory writes and conflict review, lexical retrieval, optional hybrid search, and an authenticated local HTTP/MCP service. Core operation requires no model. Transcript discovery, browser capture, and client-specific setup are later milestones.
 
 ## Development
 
@@ -59,7 +59,7 @@ Strings are scrubbed for common provider keys, AWS access identifiers, JWTs, Bea
 
 `brain.privacy.SourcePolicy(explicit_root, exclusions=("private",))` takes a snapshot of the root `.memoryignore` (Git-style patterns), then provides `read_text(relative_or_absolute_path)`. It checks exclusions/ignored parents before opening source files, rejects paths outside the root and symlinks in the traversal, reads only bounded regular UTF-8 files, and returns scrubbed text. Built-in `.git/`, `.env`, `.env.*` and `.memoryignore` exclusions cannot be negated; directory exclusions cannot be bypassed by re-including a child. Recreate the policy when root ignore rules change; nested `.memoryignore` files are not loaded in v1. The default source-read cap is 256KiB (explicit maximum 1MiB), and root ignore files are limited to 64KiB. This is a Unix/Apple Silicon helper, not an OS sandbox against another process running as the same user.
 
-There is still no public memory-write command, watcher, HTTP endpoint or MCP server. Task 4 connects prepared structured writes to the transactional ledger through the Python API. JSON Schema and pathspec runtime dependencies are pinned in pyproject/uv.lock; no embedding or generative model dependencies are required for Task 3.
+Task 4 connects prepared structured writes to the transactional ledger through the Python API. Task 7 exposes the same writer over HTTP and MCP. A transcript watcher is not required to write structured memories.
 
 
 ## Structured ledger (Task 4)
@@ -94,4 +94,34 @@ generation_id = "bge-small-v1"
 model_dir = "./models/bge-small"
 ```
 
-Run model-free semantic fixtures with `uv run python -m unittest discover -s tests -p test_semantic.py -v`. Native cases skip when extension loading is unavailable. Generation registration, backfill and model construction are trusted local administration APIs; transport authentication remains Task 7.
+Run model-free semantic fixtures with `uv run python -m unittest discover -s tests -p test_semantic.py -v`. Native cases skip when extension loading is unavailable. Generation registration and backfill remain trusted local administration APIs rather than network tools.
+
+## Local service (Task 7)
+
+Resolve a project with `brain project resolve`, then grant its returned project ID explicitly. Generate a random URL-safe token and its SHA-256 digest locally:
+
+```sh
+uv run python -c 'import hashlib,secrets; token=secrets.token_urlsafe(32); print(token); print(hashlib.sha256(token.encode()).hexdigest())'
+```
+
+Keep the first line private for your client. Save a TOML file **outside the database directory**, replace the placeholders, and set its mode to `0600`:
+
+```toml
+[principals.coding_agent]
+token_sha256 = "REPLACE_WITH_DIGEST"
+read = ["REPLACE_WITH_PROJECT_ID"]
+write = ["REPLACE_WITH_PROJECT_ID"]
+admin = false
+```
+
+Omitted capabilities grant nothing. Use a separate principal and token with `review = ["PROJECT_ID"]` for conflict decisions, and an `admin = true` principal for health probes. Restart the service after editing grants.
+
+```sh
+uv run python -m brain.service --data-dir ./brain-data --credentials /private/path/grants.toml
+```
+
+- Streamable HTTP MCP: `http://127.0.0.1:8765/mcp`, with `Authorization: Bearer <token>`. The server advertises five schema-backed tools and returns structured MCP results.
+- REST: `POST /v1/tools/{name}` with the same tool input object and bearer header; `GET /health` is admin-only.
+- Stdio: set `BRAIN_TOKEN` in the adapter process environment and run `uv run python -m brain.stdio` while the service is running. Pass the same `--port` to both processes when overriding the default. The relay opens no database and starts no model.
+
+Use the literal loopback address; other Host values and cross-origin browser calls are rejected. Requests have a 256 KiB body cap and bounded concurrency. The default service runs lexical-only. To opt in to the Task 6 worker, explicitly register and provision a trusted generation, supply the `[semantic]` settings and pass `--semantic-manifest /private/path/manifest.json` (the JSON file maps relative artifact paths to digests). One shared embedder handles both search and background indexing if sqlite-vec is available. There is no model download. Browser pairing and the `/ingest` endpoint remain Phase 4 work.

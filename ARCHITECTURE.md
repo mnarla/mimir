@@ -1,6 +1,6 @@
 # Local-first AI memory engine — implementation blueprint
 
-Phase 1 research completed 2026-11-17. The user authorized sequential Phase 2 implementation on 2026-11-18. This remains the target blueprint synthesized from four research passes; see [implementation tasks](docs/plans/2026-11-18-phase-2.md) for verified progress. Tasks 1–6 now provide package/configuration, SQLite bootstrap/migration, Git project resolution, strict contract/privacy helpers, a transactional structured-write ledger, in-process retrieval/history/review, and optional local embedding workers/hybrid search. MCP and browser capture are not implemented yet. Real ONNX inference and RAM remain unmeasured; semantic validation used synthetic vectors.
+Phase 1 research completed 2026-11-17. The user authorized sequential Phase 2 implementation on 2026-11-18. This remains the target blueprint synthesized from four research passes; see [implementation tasks](docs/plans/2026-11-18-phase-2.md) for verified progress. Tasks 1–7 implement SQLite storage and project resolution, validated structured memory, retrieval and review, optional hybrid search, and the local HTTP/MCP service. Browser capture remains planned. Real ONNX inference and RAM remain unmeasured; semantic validation used synthetic vectors.
 
 ## Decisions and evidence
 
@@ -33,7 +33,7 @@ flowchart LR
   S --> U[Phase 4 local React dashboard]
 ```
 
-FastAPI hosts local API and the Python MCP SDK's `/mcp` Streamable HTTP application. Thin stdio adapters forward protocol messages and never load ONNX or own database writers. SDK/protocol versions must be pinned during implementation against the actual testbeds. Modern HTTP may stream SSE within MCP; legacy standalone HTTP+SSE is deferred unless a client needs it. The [MCP transport specification](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports) defines framing and local Host/Origin/authentication requirements.
+Task 7 implements the local FastAPI API and the Python MCP SDK's stateless JSON `/mcp` Streamable HTTP application. The thin stdio adapter forwards protocol messages and never loads ONNX or owns database writers. The current compatibility baseline is SDK 1.30.0 with MCP protocol 2025-11-25. The [MCP transport specification](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports) defines framing and local Host/Origin/authentication requirements. The paired browser `/ingest` route remains Phase 4 work.
 
 One service process, one Uvicorn worker, one embedding session and one inference at a time initially. A bounded writer queue serializes updates; inference and filesystem/network reads happen outside writer transactions. Reads use short bounded snapshots. Long history queries have deadlines so they cannot hold WAL checkpoints indefinitely. A per-user service lock and bound-port ownership prevent duplicate engine instances; clients fail clearly or connect to the existing service rather than launch extra model copies.
 
