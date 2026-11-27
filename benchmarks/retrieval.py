@@ -12,11 +12,11 @@ from typing import Any
 
 from benchmarks.fixture import AS_OF, decision, search
 from benchmarks.handoff import latency
-from brain.db import open_database
-from brain.embeddings import Generation, load_vec
-from brain.ledger import record_memory
-from brain.retrieval import search_memory
-from brain.worker import register_generation, run_once
+from mimir.db import open_database
+from mimir.embeddings import Generation, load_vec
+from mimir.ledger import record_memory
+from mimir.retrieval import search_memory
+from mimir.worker import register_generation, run_once
 
 # Gold statements and independently phrased queries. One relevant card per query.
 CASES = (

@@ -1,1 +1,1 @@
-"""Reproducible synthetic evaluation for Brain."""
+"""Reproducible synthetic evaluation for Mimir."""

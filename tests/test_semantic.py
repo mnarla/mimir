@@ -11,11 +11,11 @@ from unittest.mock import patch
 import test_ledger
 from test_contracts import record
 
-from brain.config import ConfigError, load_config
-from brain.embeddings import EmbeddingError, Generation, LocalEmbedder, load_vec, vector_blob
-from brain.ledger import _hash, record_memory
-from brain.retrieval import search_memory
-from brain.worker import backfill, claim, complete, fail, register_generation, run_once
+from mimir.config import ConfigError, load_config
+from mimir.embeddings import EmbeddingError, Generation, LocalEmbedder, load_vec, vector_blob
+from mimir.ledger import _hash, record_memory
+from mimir.retrieval import search_memory
+from mimir.worker import backfill, claim, complete, fail, register_generation, run_once
 
 
 class SyntheticEmbedder:
@@ -147,7 +147,7 @@ class SemanticTests(unittest.TestCase):
                 second = LocalEmbedder(generation, root, manifest)
                 self.assertEqual(calls, [])
                 with patch(
-                    "brain.embeddings.importlib.import_module",
+                    "mimir.embeddings.importlib.import_module",
                     return_value=SimpleNamespace(TextEmbedding=factory),
                 ):
                     first.embed("document")
@@ -162,7 +162,7 @@ class SemanticTests(unittest.TestCase):
     def test_semantic_configuration_is_explicit_and_strict(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            config = root / "brain.toml"
+            config = root / "mimir.toml"
             config.write_text('[semantic]\ngeneration_id="g"\nmodel_dir="models"\n')
             settings = load_config(config)
             self.assertEqual(settings.semantic_model_dir, root / "models")

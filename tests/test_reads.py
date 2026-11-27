@@ -6,10 +6,10 @@ import unittest
 import test_ledger
 from test_contracts import record
 
-from brain.budget import ReadError, TokenCounter, canonical
-from brain.history import get_history
-from brain.retrieval import get_project_context, search_memory
-from brain.review import resolve_conflict
+from mimir.budget import ReadError, TokenCounter, canonical
+from mimir.history import get_history
+from mimir.retrieval import get_project_context, search_memory
+from mimir.review import resolve_conflict
 
 
 class ReadTests(unittest.TestCase):

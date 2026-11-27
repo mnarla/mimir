@@ -11,7 +11,7 @@ from typing import Any
 
 from jsonschema import Draft202012Validator, FormatChecker, ValidationError, validators
 
-from brain.privacy import scrub_text
+from mimir.privacy import scrub_text
 
 CONTRACTS = (
     "get_project_context",

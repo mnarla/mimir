@@ -3,7 +3,7 @@
 from collections.abc import Set
 from typing import Any
 
-from brain.ingestion import Event, Malformed, event, event_id, text_blocks
+from mimir.ingestion import Event, Malformed, event, event_id, text_blocks
 
 
 def message(line: dict[str, Any], excluded_sessions: Set[str]) -> Event | None:

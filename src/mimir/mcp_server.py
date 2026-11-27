@@ -1,4 +1,4 @@
-"""Expose the existing Brain contracts over MCP Streamable HTTP."""
+"""Expose the existing Mimir contracts over MCP Streamable HTTP."""
 
 from collections.abc import Awaitable, Callable
 from typing import Any
@@ -8,7 +8,7 @@ from mcp.server.lowlevel import Server
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 from starlette.requests import Request
 
-from brain.contracts import schema_for
+from mimir.contracts import schema_for
 
 TOOL_DESCRIPTIONS = {
     "search_memory": "Search accepted project memories within an authorized scope.",
@@ -23,7 +23,7 @@ READ_TOOLS = frozenset({"search_memory", "get_project_context", "get_history"})
 def manager_for(
     dispatch: Callable[[Request, str, object], Awaitable[dict[str, Any]]],
 ) -> StreamableHTTPSessionManager:
-    server: Server[Any] = Server("brain", version="0.1.0", website_url=None)
+    server: Server[Any] = Server("mimir", version="0.1.0", website_url=None)
     tools = [
         types.Tool(
             name=name,

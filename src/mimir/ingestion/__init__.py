@@ -8,8 +8,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
-from brain.contracts import _constant, _json_copy, _pairs
-from brain.privacy import scrub_text
+from mimir.contracts import _constant, _json_copy, _pairs
+from mimir.privacy import scrub_text
 
 MAX_LINE_BYTES = 262144
 _SESSION = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}")

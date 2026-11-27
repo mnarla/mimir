@@ -49,7 +49,7 @@ Provision projects through the local admin CLI before tool writes. Planned `memo
 
 ## Contracts and API surface
 
-[Pass 4 Section 4](research/04-mcp-and-retrieval.md#4-original-mcp-server--token-budgeted-retrieval-layer) documents the **draft-2020-12 JSON Schema registry**, now packaged unchanged as `src/brain/contracts/v1.json`, including every required field, enum, bound, nested object and success/error envelope. Export each tool's Input/Output with local `$defs` included. No network schema resolution, unknown keys, implicit defaults, type coercion or nonfinite JSON values.
+[Pass 4 Section 4](research/04-mcp-and-retrieval.md#4-original-mcp-server--token-budgeted-retrieval-layer) documents the **draft-2020-12 JSON Schema registry**, now packaged unchanged as `src/mimir/contracts/v1.json`, including every required field, enum, bound, nested object and success/error envelope. Export each tool's Input/Output with local `$defs` included. No network schema resolution, unknown keys, implicit defaults, type coercion or nonfinite JSON values.
 
 | Interface | Input → output | Semantics |
 | --- | --- | --- |

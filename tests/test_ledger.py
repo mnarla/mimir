@@ -9,8 +9,8 @@ from pathlib import Path
 
 from test_contracts import record
 
-from brain.db import initialize_database
-from brain.ledger import LedgerError, record_memory
+from mimir.db import initialize_database
+from mimir.ledger import LedgerError, record_memory
 
 
 class LedgerTests(unittest.TestCase):

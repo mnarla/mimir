@@ -20,7 +20,7 @@ def environment() -> dict[str, str | int]:
         "platform": platform.platform(),
         "python": platform.python_version(),
         "sqlite": sqlite3.sqlite_version,
-        "brain": version("brain-local-memory"),
+        "mimir": version("mimir-local-memory"),
         "mcp": version("mcp"),
     }
     if platform.system() == "Darwin":
@@ -46,7 +46,7 @@ def main() -> None:
         parser.error("Run without Python optimization so the demo assertions execute")
     if not 1 <= args.repeats <= 100:
         parser.error("--repeats must be between 1 and 100")
-    with tempfile.TemporaryDirectory(prefix="brain-benchmark-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="mimir-benchmark-") as temporary:
         root = Path(temporary).resolve()
         data_dir = root / "data"
         writer, reader, unrelated = projects(root, data_dir)

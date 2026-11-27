@@ -4,9 +4,9 @@ import sqlite3
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
-from brain.budget import snapshot
-from brain.embeddings import Embedder, EmbeddingError, Generation, vector_blob
-from brain.ledger import _hash
+from mimir.budget import snapshot
+from mimir.embeddings import Embedder, EmbeddingError, Generation, vector_blob
+from mimir.ledger import _hash
 
 
 def _time(value: datetime) -> str:

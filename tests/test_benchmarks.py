@@ -6,7 +6,7 @@ import sys
 import unittest
 from contextlib import closing
 
-from brain.embeddings import load_vec
+from mimir.embeddings import load_vec
 
 
 class BenchmarkTests(unittest.TestCase):

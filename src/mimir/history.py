@@ -4,7 +4,7 @@ import sqlite3
 from collections.abc import Set
 from typing import Any
 
-from brain.budget import (
+from mimir.budget import (
     ReadError,
     TokenCounter,
     authorize,
@@ -13,7 +13,7 @@ from brain.budget import (
     snapshot,
     source_from,
 )
-from brain.contracts import prepare_input, validate_output
+from mimir.contracts import prepare_input, validate_output
 
 
 def get_history(

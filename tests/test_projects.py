@@ -14,7 +14,7 @@ from contextlib import closing
 from pathlib import Path
 from unittest.mock import patch
 
-from brain.db import initialize_database
+from mimir.db import initialize_database
 
 
 class ProjectTests(unittest.TestCase):
@@ -26,8 +26,8 @@ class ProjectTests(unittest.TestCase):
         self.addCleanup(self.db.close)
 
     def api(self):
-        self.assertIsNotNone(importlib.util.find_spec("brain.projects"), "missing project resolver")
-        return importlib.import_module("brain.projects")
+        self.assertIsNotNone(importlib.util.find_spec("mimir.projects"), "missing project resolver")
+        return importlib.import_module("mimir.projects")
 
     def git(self, cwd, *args):
         env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
@@ -243,7 +243,7 @@ class ProjectTests(unittest.TestCase):
         args = [
             sys.executable,
             "-m",
-            "brain",
+            "mimir",
             "project",
             "resolve",
             "--cwd",

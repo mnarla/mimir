@@ -9,10 +9,10 @@ from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
-from brain.budget import snapshot
-from brain.ingestion import MAX_LINE_BYTES, Event, Malformed, claude, codex, parse_line
-from brain.ledger import _hash
-from brain.privacy import PrivacyError, SourcePolicy, scrub_text
+from mimir.budget import snapshot
+from mimir.ingestion import MAX_LINE_BYTES, Event, Malformed, claude, codex, parse_line
+from mimir.ledger import _hash
+from mimir.privacy import PrivacyError, SourcePolicy, scrub_text
 
 MAX_FILE_BYTES = 1048576
 MAX_BATCH_LINES = 128

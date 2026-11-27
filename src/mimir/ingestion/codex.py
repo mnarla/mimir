@@ -3,7 +3,7 @@
 from collections.abc import Set
 from typing import Any
 
-from brain.ingestion import Event, Malformed, event, event_id, text_blocks
+from mimir.ingestion import Event, Malformed, event, event_id, text_blocks
 
 
 def session_header(line: dict[str, Any]) -> str:

@@ -20,11 +20,11 @@ from mcp.client.stdio import stdio_client
 from mcp.client.streamable_http import streamable_http_client
 from test_contracts import record
 
-from brain.budget import canonical
-from brain.config import ConfigError, Settings
-from brain.contracts import MAX_BODY_BYTES, schema_for
-from brain.db import initialize_database
-from brain.service import Principal, create_app, load_principals
+from mimir.budget import canonical
+from mimir.config import ConfigError, Settings
+from mimir.contracts import MAX_BODY_BYTES, schema_for
+from mimir.db import initialize_database
+from mimir.service import Principal, create_app, load_principals
 
 BASE = "http://127.0.0.1:8765"
 WRITER = "w" * 43
@@ -104,8 +104,8 @@ class TransportTests(unittest.TestCase):
                                     self.assertFalse(written.isError)
                         params = StdioServerParameters(
                             command=sys.executable,
-                            args=["-m", "brain.stdio", "--port", str(port)],
-                            env={"BRAIN_TOKEN": WRITER},
+                            args=["-m", "mimir.stdio", "--port", str(port)],
+                            env={"MIMIR_TOKEN": WRITER},
                         )
                         async with stdio_client(params) as streams:
                             async with ClientSession(*streams) as session:

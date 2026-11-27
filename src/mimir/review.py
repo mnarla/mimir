@@ -7,10 +7,10 @@ from collections.abc import Set
 from datetime import UTC, datetime
 from typing import Any
 
-from brain.budget import ReadError, authorize, snapshot
-from brain.contracts import prepare_input, validate_output
-from brain.ledger import _hash, _id, _json
-from brain.privacy import scrub_text
+from mimir.budget import ReadError, authorize, snapshot
+from mimir.contracts import prepare_input, validate_output
+from mimir.ledger import _hash, _id, _json
+from mimir.privacy import scrub_text
 
 
 def resolve_conflict(

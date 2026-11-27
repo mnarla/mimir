@@ -19,11 +19,11 @@ class BootstrapTests(unittest.TestCase):
 
     def api(self, module):
         try:
-            spec = importlib.util.find_spec(f"brain.{module}")
+            spec = importlib.util.find_spec(f"mimir.{module}")
         except ModuleNotFoundError:
             spec = None
         self.assertIsNotNone(spec, f"missing {module} API")
-        return importlib.import_module(f"brain.{module}")
+        return importlib.import_module(f"mimir.{module}")
 
     def open_db(self):
         connection = self.api("db").initialize_database(self.root / "data")
@@ -31,7 +31,7 @@ class BootstrapTests(unittest.TestCase):
         return connection
 
     def test_config_resolves_relative_to_file_and_cli_override(self):
-        config = self.root / "brain.toml"
+        config = self.root / "mimir.toml"
         config.write_text('[storage]\ndata_dir="data"\ncache_kib=1024\n')
         load = self.api("config").load_config
         settings = load(config)
@@ -40,7 +40,7 @@ class BootstrapTests(unittest.TestCase):
         self.assertEqual(load(config, self.root / "override").data_dir, self.root / "override")
 
     def test_config_rejects_unknown_keys_and_invalid_bounds_without_echo(self):
-        config = self.root / "brain.toml"
+        config = self.root / "mimir.toml"
         api = self.api("config")
         for payload in [
             'secret="PRIVATE"',
@@ -60,7 +60,7 @@ class BootstrapTests(unittest.TestCase):
         api = self.api("config")
         with self.assertRaises(api.ConfigError):
             api.load_config(self.root / "absent")
-        config = self.root / "brain.toml"
+        config = self.root / "mimir.toml"
         config.write_text('SECRET = "unclosed')
         with self.assertRaises(api.ConfigError) as caught:
             api.load_config(config)
@@ -172,7 +172,7 @@ class BootstrapTests(unittest.TestCase):
         from unittest.mock import patch
 
         # Inject invalid migration SQL without changing the shipped file.
-        with patch("brain.db.migration_sql", return_value="CREATE TABLE partial(x);\nBAD SQL;\n"):
+        with patch("mimir.db.migration_sql", return_value="CREATE TABLE partial(x);\nBAD SQL;\n"):
             with self.assertRaises(api.DatabaseError):
                 api.initialize_database(self.root / "data")
         with sqlite3.connect(self.root / "data" / "memory.sqlite") as c:
@@ -183,7 +183,7 @@ class BootstrapTests(unittest.TestCase):
     def test_cli_initializes_only_explicit_target(self):
         # No subprocess execution of agent binaries; only our own module.
         result = subprocess.run(
-            [sys.executable, "-m", "brain", "init", "--data-dir", str(self.root / "cli-data")],
+            [sys.executable, "-m", "mimir", "init", "--data-dir", str(self.root / "cli-data")],
             capture_output=True,
             text=True,
         )

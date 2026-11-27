@@ -61,9 +61,9 @@ def batch():
 class ContractTests(unittest.TestCase):
     def api(self):
         self.assertIsNotNone(
-            importlib.util.find_spec("brain.contracts"), "missing contract boundary"
+            importlib.util.find_spec("mimir.contracts"), "missing contract boundary"
         )
-        return importlib.import_module("brain.contracts")
+        return importlib.import_module("mimir.contracts")
 
     def test_registry_matches_research_and_exports_local_object_schemas(self):
         api = self.api()

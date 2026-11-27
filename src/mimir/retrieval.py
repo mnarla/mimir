@@ -6,7 +6,7 @@ from collections.abc import Set
 from datetime import UTC, datetime
 from typing import Any
 
-from brain.budget import (
+from mimir.budget import (
     SOURCE_COLUMNS,
     ReadError,
     TokenCounter,
@@ -17,8 +17,8 @@ from brain.budget import (
     snapshot,
     source_from,
 )
-from brain.contracts import prepare_input, validate_output
-from brain.embeddings import Embedder, load_vec, vector_blob
+from mimir.contracts import prepare_input, validate_output
+from mimir.embeddings import Embedder, load_vec, vector_blob
 
 TYPE_ORDER = ("Decision", "Constraint", "TaskState", "TechStack", "BugFix")
 

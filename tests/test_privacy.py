@@ -10,8 +10,8 @@ from unittest.mock import patch
 
 class PrivacyTests(unittest.TestCase):
     def api(self):
-        self.assertIsNotNone(importlib.util.find_spec("brain.privacy"), "missing privacy boundary")
-        return importlib.import_module("brain.privacy")
+        self.assertIsNotNone(importlib.util.find_spec("mimir.privacy"), "missing privacy boundary")
+        return importlib.import_module("mimir.privacy")
 
     def test_scrubs_common_keys_headers_urls_jwt_and_private_key_blocks(self):
         api = self.api()
@@ -63,7 +63,7 @@ class PrivacyTests(unittest.TestCase):
                 root / "ignored/chat.txt",
                 root / "private/chat.txt",
             ]:
-                with self.subTest(path=path), patch("brain.privacy.os.open") as opened:
+                with self.subTest(path=path), patch("mimir.privacy.os.open") as opened:
                     with self.assertRaises(api.PrivacyError):
                         policy.read_text(path)
                     opened.assert_not_called()

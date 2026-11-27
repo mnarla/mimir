@@ -1,4 +1,4 @@
-"""Bridge newline-framed MCP messages to an existing Brain loopback service."""
+"""Bridge newline-framed MCP messages to an existing Mimir loopback service."""
 
 import argparse
 import json
@@ -9,7 +9,7 @@ from typing import BinaryIO
 
 import httpx
 
-from brain.contracts import MAX_BODY_BYTES, _constant, _pairs
+from mimir.contracts import MAX_BODY_BYTES, _constant, _pairs
 
 
 def relay(port: int, token: str, source: BinaryIO, sink: BinaryIO) -> int:
@@ -55,14 +55,14 @@ def relay(port: int, token: str, source: BinaryIO, sink: BinaryIO) -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Relay MCP stdin/stdout to a local Brain service")
+    parser = argparse.ArgumentParser(description="Relay MCP stdin/stdout to a local Mimir service")
     parser.add_argument("--port", type=int, default=8765)
     args = parser.parse_args()
     status = relay(
-        args.port, os.environ.get("BRAIN_TOKEN", ""), sys.stdin.buffer, sys.stdout.buffer
+        args.port, os.environ.get("MIMIR_TOKEN", ""), sys.stdin.buffer, sys.stdout.buffer
     )
     if status:
-        print("Brain stdio relay could not complete the local request", file=sys.stderr)
+        print("Mimir stdio relay could not complete the local request", file=sys.stderr)
     return status
 
 

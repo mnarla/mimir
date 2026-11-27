@@ -128,58 +128,6 @@ wheels = [
 ]
 
 [[package]]
-name = "brain-local-memory"
-version = "0.1.0"
-source = { editable = "." }
-dependencies = [
-    { name = "anyio" },
-    { name = "fastapi" },
-    { name = "httpx" },
-    { name = "jsonschema" },
-    { name = "mcp" },
-    { name = "pathspec" },
-    { name = "starlette" },
-    { name = "uvicorn" },
-]
-
-[package.optional-dependencies]
-semantic = [
-    { name = "fastembed" },
-    { name = "sqlite-vec" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "bandit" },
-    { name = "mypy" },
-    { name = "ruff" },
-    { name = "types-jsonschema" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "anyio", specifier = "==4.16.0" },
-    { name = "fastapi", specifier = "==0.165.0" },
-    { name = "fastembed", marker = "extra == 'semantic'", specifier = "==0.9.1" },
-    { name = "httpx", specifier = "==0.29.0" },
-    { name = "jsonschema", specifier = "==4.26.0" },
-    { name = "mcp", specifier = "==1.30.0" },
-    { name = "pathspec", specifier = "==1.1.1" },
-    { name = "sqlite-vec", marker = "extra == 'semantic'", specifier = "==0.1.9" },
-    { name = "starlette", specifier = "==1.10.0" },
-    { name = "uvicorn", specifier = "==0.54.0" },
-]
-provides-extras = ["semantic"]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "bandit" },
-    { name = "mypy" },
-    { name = "ruff" },
-    { name = "types-jsonschema", specifier = ">=4.26.0.20261006" },
-]
-
-[[package]]
 name = "certifi"
 version = "2026.11.20"
 source = { registry = "https://pypi.org/simple" }
@@ -834,6 +782,58 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/d6/54/cfe61301667036ec958cb99bd3efefba235e65cdeb9c84d24a8293ba1d90/mdurl-0.1.2.tar.gz", hash = "sha256:bb413d29f5eea38f31dd4754dd7377d4465116fb207585f97bf925588687c1ba", size = 8729, upload-time = "2022-08-14T12:40:10.846Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b3/38/89ba8ad64ae25be8de66a6d463314cf1eb366222074cfda9ee839c56a4b4/mdurl-0.1.2-py3-none-any.whl", hash = "sha256:84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8", size = 9979, upload-time = "2022-08-14T12:40:09.779Z" },
+]
+
+[[package]]
+name = "mimir-local-memory"
+version = "0.1.0"
+source = { editable = "." }
+dependencies = [
+    { name = "anyio" },
+    { name = "fastapi" },
+    { name = "httpx" },
+    { name = "jsonschema" },
+    { name = "mcp" },
+    { name = "pathspec" },
+    { name = "starlette" },
+    { name = "uvicorn" },
+]
+
+[package.optional-dependencies]
+semantic = [
+    { name = "fastembed" },
+    { name = "sqlite-vec" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "bandit" },
+    { name = "mypy" },
+    { name = "ruff" },
+    { name = "types-jsonschema" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "anyio", specifier = "==4.16.0" },
+    { name = "fastapi", specifier = "==0.165.0" },
+    { name = "fastembed", marker = "extra == 'semantic'", specifier = "==0.9.1" },
+    { name = "httpx", specifier = "==0.29.0" },
+    { name = "jsonschema", specifier = "==4.26.0" },
+    { name = "mcp", specifier = "==1.30.0" },
+    { name = "pathspec", specifier = "==1.1.1" },
+    { name = "sqlite-vec", marker = "extra == 'semantic'", specifier = "==0.1.9" },
+    { name = "starlette", specifier = "==1.10.0" },
+    { name = "uvicorn", specifier = "==0.54.0" },
+]
+provides-extras = ["semantic"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "bandit" },
+    { name = "mypy" },
+    { name = "ruff" },
+    { name = "types-jsonschema", specifier = ">=4.26.0.20261006" },
 ]
 
 [[package]]

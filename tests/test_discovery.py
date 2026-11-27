@@ -10,9 +10,9 @@ import unittest
 from contextlib import closing
 from pathlib import Path
 
-from brain.db import initialize_database
-from brain.ingestion.watcher import discover
-from brain.privacy import PrivacyError, SourcePolicy
+from mimir.db import initialize_database
+from mimir.ingestion.watcher import discover
+from mimir.privacy import PrivacyError, SourcePolicy
 
 STAMP = "2026-11-26T12:00:00.123456789Z"
 SECRET = "sk-" + "x" * 24
@@ -151,7 +151,7 @@ class DiscoveryTests(unittest.TestCase):
         cli = [
             sys.executable,
             "-m",
-            "brain",
+            "mimir",
             "discover",
             "--adapter",
             "claude",

@@ -40,7 +40,7 @@ def load_config(config: Path | None = None, data_dir: Path | None = None) -> Set
         base = config.absolute().parent
     if set(storage) - {"data_dir", "busy_timeout_ms", "cache_kib"}:
         raise ConfigError("Unknown storage setting")
-    raw_dir = storage.get("data_dir", "~/.local/share/brain")
+    raw_dir = storage.get("data_dir", "~/.local/share/mimir")
     if not isinstance(raw_dir, str) or not raw_dir.strip():
         raise ConfigError("Storage path must be nonempty text")
     timeout = storage.get("busy_timeout_ms", 3000)

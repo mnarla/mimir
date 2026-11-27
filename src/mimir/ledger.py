@@ -13,8 +13,8 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
-from brain.contracts import prepare_input, validate_output
-from brain.privacy import scrub_text
+from mimir.contracts import prepare_input, validate_output
+from mimir.privacy import scrub_text
 
 
 class LedgerError(ValueError):

@@ -8,17 +8,17 @@ from contextlib import closing
 from dataclasses import asdict
 from pathlib import Path
 
-from brain.budget import ReadError
-from brain.config import ConfigError, Settings, load_config
-from brain.db import DatabaseError, initialize, initialize_database, open_database
-from brain.ingestion.watcher import discover, fixture_policy
-from brain.privacy import PrivacyError
-from brain.projects import ProjectConflict, ProjectError, resolve_project
+from mimir.budget import ReadError
+from mimir.config import ConfigError, Settings, load_config
+from mimir.db import DatabaseError, initialize, initialize_database, open_database
+from mimir.ingestion.watcher import discover, fixture_policy
+from mimir.privacy import PrivacyError
+from mimir.projects import ProjectConflict, ProjectError, resolve_project
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        prog="brain", description="Local project memory administration"
+        prog="mimir", description="Local project memory administration"
     )
     parser.add_argument("--config", type=Path)
     subcommands = parser.add_subparsers(dest="command", required=True)

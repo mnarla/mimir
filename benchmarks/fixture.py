@@ -55,7 +55,7 @@ def projects(root: Path, data_dir: Path) -> tuple[str, str, str]:
             [
                 sys.executable,
                 "-m",
-                "brain",
+                "mimir",
                 "project",
                 "resolve",
                 "--cwd",

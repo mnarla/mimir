@@ -23,7 +23,7 @@ from mcp.client.streamable_http import streamable_http_client
 from mcp.types import CallToolResult, ListToolsResult
 
 from benchmarks.fixture import ANCHOR, ANSWER, RATIONALE, TASK, decision, search
-from brain.budget import canonical
+from mimir.budget import canonical
 
 _RSS_LOCK = Lock()
 
@@ -71,7 +71,7 @@ async def service(
         [
             sys.executable,
             "-m",
-            "brain.service",
+            "mimir.service",
             "--data-dir",
             str(data_dir),
             "--credentials",
@@ -107,7 +107,7 @@ async def wait_for_health(base: str, process: subprocess.Popen[bytes], admin: st
                 except httpx.TransportError:
                     pass
                 await anyio.sleep(0.01)
-    raise RuntimeError(f"Brain service exited with status {process.returncode}")
+    raise RuntimeError(f"Mimir service exited with status {process.returncode}")
 
 
 def rss(service_pid: int) -> dict[str, int]:
@@ -330,9 +330,9 @@ async def exercise(
 
         params = StdioServerParameters(
             command=sys.executable,
-            args=["-m", "brain.stdio", "--port", str(port)],
+            args=["-m", "mimir.stdio", "--port", str(port)],
             cwd=worktree,
-            env={"BRAIN_TOKEN": reader, "HOME": str(worktree.parent)},
+            env={"MIMIR_TOKEN": reader, "HOME": str(worktree.parent)},
         )
         async with stdio_client(params) as relay, ClientSession(*relay) as b:
             await b.initialize()

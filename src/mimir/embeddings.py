@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
-from brain.ledger import _hash
+from mimir.ledger import _hash
 
 
 class EmbeddingError(ValueError):

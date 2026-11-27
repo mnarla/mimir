@@ -3,7 +3,7 @@ requires = ["hatchling==1.27.0"]
 build-backend = "hatchling.build"
 
 [project]
-name = "brain-local-memory"
+name = "mimir-local-memory"
 version = "0.1.0"
 description = "Local-first project memory for AI tools"
 readme = "README.md"
@@ -20,7 +20,7 @@ dependencies = [
 ]
 
 [project.scripts]
-brain = "brain.__main__:main"
+mimir = "mimir.__main__:main"
 
 [project.optional-dependencies]
 semantic = [
@@ -37,7 +37,7 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/brain"]
+packages = ["src/mimir"]
 
 [tool.ruff]
 target-version = "py312"
@@ -49,4 +49,4 @@ select = ["E", "F", "I", "UP", "B"]
 [tool.mypy]
 python_version = "3.12"
 strict = true
-files = ["src/brain"]
+files = ["src/mimir"]

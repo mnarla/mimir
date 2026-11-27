@@ -27,17 +27,17 @@ from mcp.shared.version import SUPPORTED_PROTOCOL_VERSIONS
 from starlette.requests import ClientDisconnect, Request
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from brain.budget import ReadError
-from brain.config import ConfigError, Settings, load_config
-from brain.contracts import MAX_BODY_BYTES, ContractError, _constant, _json_copy, _pairs
-from brain.db import DatabaseError, initialize_database, open_database
-from brain.embeddings import Embedder, Generation, LocalEmbedder, load_vec
-from brain.history import get_history
-from brain.ledger import LedgerError, record_memory
-from brain.mcp_server import READ_TOOLS, TOOL_DESCRIPTIONS, manager_for
-from brain.retrieval import get_project_context, search_memory
-from brain.review import resolve_conflict
-from brain.worker import run_once
+from mimir.budget import ReadError
+from mimir.config import ConfigError, Settings, load_config
+from mimir.contracts import MAX_BODY_BYTES, ContractError, _constant, _json_copy, _pairs
+from mimir.db import DatabaseError, initialize_database, open_database
+from mimir.embeddings import Embedder, Generation, LocalEmbedder, load_vec
+from mimir.history import get_history
+from mimir.ledger import LedgerError, record_memory
+from mimir.mcp_server import READ_TOOLS, TOOL_DESCRIPTIONS, manager_for
+from mimir.retrieval import get_project_context, search_memory
+from mimir.review import resolve_conflict
+from mimir.worker import run_once
 
 DEFAULT_PORT = 8765
 _ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}")
@@ -195,7 +195,7 @@ class LocalGate:
         if principal is None:
             await _response("unauthorized")(scope, receive, no_store)
             return
-        scope["brain.principal"] = principal
+        scope["mimir.principal"] = principal
 
         try:
             self.inflight.acquire_nowait()
@@ -331,7 +331,7 @@ def create_app(
         return _error("not_found")
 
     async def dispatch(request: Request, name: str, payload: object) -> dict[str, Any]:
-        principal = request.scope.get("brain.principal")
+        principal = request.scope.get("mimir.principal")
         if not isinstance(principal, Principal):
             return _error("unauthorized")
         if name not in TOOL_DESCRIPTIONS:
@@ -403,7 +403,7 @@ def create_app(
 
     @app.get("/health")
     async def health(request: Request) -> JSONResponse:
-        if not request.scope["brain.principal"].admin:
+        if not request.scope["mimir.principal"].admin:
             return _response("scope_denied")
 
         def probe() -> dict[str, Any]:
@@ -473,7 +473,7 @@ def configured_embedder(settings: Settings, manifest_path: Path | None) -> Local
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Run the Brain loopback service")
+    parser = argparse.ArgumentParser(description="Run the Mimir loopback service")
     parser.add_argument("--credentials", type=Path, required=True)
     parser.add_argument("--config", type=Path)
     parser.add_argument("--data-dir", type=Path)
@@ -490,7 +490,7 @@ def main() -> int:
             embedder=configured_embedder(settings, args.semantic_manifest),
         )
     except (OSError, ValueError, DatabaseError):
-        print("Invalid Brain service configuration", file=sys.stderr)
+        print("Invalid Mimir service configuration", file=sys.stderr)
         return 2
     server = uvicorn.Server(
         uvicorn.Config(

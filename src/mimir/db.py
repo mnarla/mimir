@@ -7,7 +7,7 @@ import stat
 from importlib.resources import files
 from pathlib import Path
 
-from brain.config import Settings
+from mimir.config import Settings
 
 
 class DatabaseError(RuntimeError):
@@ -15,7 +15,7 @@ class DatabaseError(RuntimeError):
 
 
 def migration_sql() -> str:
-    return files("brain").joinpath("migrations/001_initial.sql").read_text(encoding="utf-8")
+    return files("mimir").joinpath("migrations/001_initial.sql").read_text(encoding="utf-8")
 
 
 def _prepare_storage(data_dir: Path) -> Path:
