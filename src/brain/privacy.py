@@ -3,8 +3,10 @@
 import os
 import re
 import stat
-from contextlib import ExitStack
+from collections.abc import Iterator
+from contextlib import ExitStack, contextmanager
 from pathlib import Path
+from typing import BinaryIO
 
 from pathspec import GitIgnoreSpec
 
@@ -47,8 +49,9 @@ def scrub_text(text: str) -> str:
     return _ASSIGNMENT.sub(lambda m: m[1] + REDACTED, text)
 
 
-def _read(root: Path, relative: Path, limit: int) -> str:
-    """Walk descriptors without following symlinks; ignored paths never reach this function."""
+@contextmanager
+def _open(root: Path, relative: Path) -> Iterator[BinaryIO]:
+    """Walk descriptors without following symlinks."""
     try:
         with ExitStack() as stack:
             directory = os.open(root, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
@@ -64,10 +67,18 @@ def _read(root: Path, relative: Path, limit: int) -> str:
             file = stack.enter_context(os.fdopen(fd, "rb"))
             if not stat.S_ISREG(os.fstat(file.fileno()).st_mode):
                 raise PrivacyError("Source must be a regular file")
+            yield file
+    except OSError:
+        raise PrivacyError("Cannot safely read source") from None
+
+
+def _read(root: Path, relative: Path, limit: int) -> str:
+    try:
+        with _open(root, relative) as file:
             raw = file.read(limit + 1)
-            if len(raw) > limit:
-                raise PrivacyError("Source exceeds the read limit")
-            return raw.decode("utf-8")
+        if len(raw) > limit:
+            raise PrivacyError("Source exceeds the read limit")
+        return raw.decode("utf-8")
     except (OSError, UnicodeError):
         raise PrivacyError("Cannot safely read source") from None
 
@@ -105,6 +116,9 @@ class SourcePolicy:
     def read_text(self, path: Path, *, max_bytes: int = 262144) -> str:
         if type(max_bytes) is not int or not 1 <= max_bytes <= 1048576:
             raise PrivacyError("Invalid source read limit")
+        return scrub_text(_read(self.root, self.authorize(path), max_bytes))
+
+    def authorize(self, path: Path) -> Path:
         path = path if path.is_absolute() else self.root / path
         try:
             relative = path.relative_to(self.root)
@@ -123,4 +137,10 @@ class SourcePolicy:
             if parent.parts
         ):
             raise PrivacyError("Source is ignored")
-        return scrub_text(_read(self.root, relative, max_bytes))
+        return relative
+
+    @contextmanager
+    def open_source(self, path: Path) -> Iterator[BinaryIO]:
+        """Open an authorized regular source. Callers must bound reads and scrub derived data."""
+        with _open(self.root, self.authorize(path)) as file:
+            yield file

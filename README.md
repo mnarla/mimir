@@ -2,7 +2,7 @@
 
 Local-first, project-scoped memory for AI tools. Phase 2 is being built one task at a time; see [the task checklist](docs/plans/2026-11-18-phase-2.md) and [architecture](ARCHITECTURE.md).
 
-Brain provides private SQLite storage, persistent Git project identity, structured memory writes and conflict review, lexical retrieval, optional hybrid search, and an authenticated local HTTP/MCP service. Core operation requires no model. Transcript discovery, browser capture, and client-specific setup are later milestones.
+Brain provides private SQLite storage, persistent Git project identity, structured memory writes and conflict review, lexical retrieval, optional hybrid search, and an authenticated local HTTP/MCP service. Core operation requires no model. Explicit JSONL fixture discovery is available; live transcript monitoring, browser capture, and client-specific setup are later milestones.
 
 ## Development
 
@@ -35,7 +35,7 @@ cache_kib = 8192
 
 Relative data paths resolve against the config file's directory. CLI `--data-dir` overrides only the configured path. Unknown keys and out-of-range values fail without printing submitted config values. Keep configuration and local databases out of version control. The init command requires a dedicated directory owned by the current user and refuses symlinks for the data directory, database and SQLite sidecars.
 
-See the research documents for the proposed contracts. The ~300MB target and token savings remain unmeasured.
+See the research documents for the proposed contracts and the Task 9 runbook below for measured lexical-service memory and handoff context costs.
 
 
 ## Resolve a project
@@ -120,8 +120,48 @@ Omitted capabilities grant nothing. Use a separate principal and token with `rev
 uv run python -m brain.service --data-dir ./brain-data --credentials /private/path/grants.toml
 ```
 
-- Streamable HTTP MCP: `http://127.0.0.1:8765/mcp`, with `Authorization: Bearer <token>`. The server advertises five schema-backed tools and returns structured MCP results.
+- Streamable HTTP MCP: `http://127.0.0.1:8765/mcp`, with `Authorization: Bearer <token>`. The server advertises five tools with self-contained input and output schemas that include only the definitions each schema uses. Tool calls return structured MCP results.
 - REST: `POST /v1/tools/{name}` with the same tool input object and bearer header; `GET /health` is admin-only.
 - Stdio: set `BRAIN_TOKEN` in the adapter process environment and run `uv run python -m brain.stdio` while the service is running. Pass the same `--port` to both processes when overriding the default. The relay opens no database and starts no model.
 
 Use the literal loopback address; other Host values and cross-origin browser calls are rejected. Requests have a 256 KiB body cap and bounded concurrency. The default service runs lexical-only. To opt in to the Task 6 worker, explicitly register and provision a trusted generation, supply the `[semantic]` settings and pass `--semantic-manifest /private/path/manifest.json` (the JSON file maps relative artifact paths to digests). One shared embedder handles both search and background indexing if sqlite-vec is available. There is no model download. Browser pairing and the `/ingest` endpoint remain Phase 4 work.
+
+## Synthetic JSONL discovery (Task 8)
+
+Resolve a project first with `brain project resolve`. Point discovery at one synthetic or explicitly exported fixture and use the returned project ID:
+
+```sh
+uv run brain discover --root ./fixtures --file transcript.jsonl --adapter claude \
+  --project-id PROJECT_ID --data-dir ./brain-data
+```
+
+Use `--adapter codex` for rollout fixtures with session metadata on the first line. The command is a single scan, with no automatic root discovery, directory enumeration, or background monitoring. It respects `.memoryignore`, repeatable `--exclude-path` and `--exclude-session` options, and rejects conventional live transcript directories and symlinked or hardlinked inputs.
+
+Each scan accepts files up to 1 MiB, with at most 128 complete records per poll and a 256 KiB per-line cap. Run again to resume after `batch_limit` or after a partial line is completed. A malformed line stops the cursor and exits nonzero. Queue pressure checkpoints only the prefix that fit. Rotation, truncation and edits to the committed prefix reset the cursor, while unchanged source references are deduplicated on replay.
+
+Output contains checkpoint metadata and new opaque source reference IDs. Brain carries only references and fingerprints of scrubbed text into SQLite; no transcript bodies are stored or printed. Discovery does not extract memories, consume these references, or re-open a rotated source. Live format compatibility has not been tested.
+
+## Reproduce the worktree handoff (Task 9)
+
+From the repository root on macOS, with Git that supports `git worktree add --orphan`:
+
+```sh
+uv run --locked python -m benchmarks --demo-only
+```
+
+The runner creates disposable Git directories, a linked worktree, a database, and scoped grants. An SDK client writes a storage decision over Streamable HTTP. A second SDK client reads it with provenance through the stdio relay, receives a conflict warning after a competing write, and can still see the original acceptance in history. The service runs the lexical fallback over loopback. The report includes startup and lookup latency, sampled process RSS, and the modeled context cost of this handoff against a concise manual note.
+
+For the FTS, vector, and hybrid comparison, use a Python interpreter with SQLite extension loading and the pinned sqlite-vec package. On the measured MacBook, Homebrew Python 3.14 supplied extension loading. These commands run against a built wheel with the locked core dependencies and sqlite-vec:
+
+```sh
+bench_dir=$(mktemp -d)
+uv build --out-dir "$bench_dir/dist"
+uv export --locked --no-dev --no-emit-project --format requirements.txt -o "$bench_dir/core.txt"
+uv venv --python /opt/homebrew/bin/python3.14 "$bench_dir/venv"
+uv pip install --python "$bench_dir/venv/bin/python" -r "$bench_dir/core.txt" \
+  "$bench_dir"/dist/*.whl sqlite-vec==0.1.9
+cp -R benchmarks "$bench_dir/"
+(cd "$bench_dir" && ./venv/bin/python -m benchmarks --repeats 30 > report.json)
+```
+
+The report separates simulated MCP handoff, synthetic-vector recall, and sampled lexical-service memory. It gives UTF-8 byte counts for a specified context model and a rough four-bytes-per-token estimate. Run details and measured results are in the [Task 9 checkpoint](docs/plans/2026-11-18-phase-2.md#task-9-checkpoint).
