@@ -1,6 +1,7 @@
 """HTTP and MCP share one synthetic local ledger."""
 
 import hashlib
+import re
 import socket
 import sys
 import tempfile
@@ -13,11 +14,13 @@ import anyio
 import httpx
 import uvicorn
 from fastapi.testclient import TestClient
+from jsonschema import Draft202012Validator
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from mcp.client.streamable_http import streamable_http_client
 from test_contracts import record
 
+from brain.budget import canonical
 from brain.config import ConfigError, Settings
 from brain.contracts import MAX_BODY_BYTES, schema_for
 from brain.db import initialize_database
@@ -155,9 +158,28 @@ class TransportTests(unittest.TestCase):
         self.assertEqual(initialized.json()["result"]["protocolVersion"], "2025-11-25")
         tools = self.rpc("tools/list").json()["result"]["tools"]
         self.assertEqual(len(tools), 5)
+        self.assertLess(len(canonical(tools)), 30_000, "MCP catalog includes unused definitions")
+        for tool in tools:
+            for field, direction in (("inputSchema", "Input"), ("outputSchema", "Output")):
+                with self.subTest(tool=tool["name"], direction=direction):
+                    full = schema_for(tool["name"], direction)
+                    advertised = tool[field]
+                    references = {
+                        name.decode()
+                        for name in re.findall(
+                            rb'"\$ref":"#/\$defs/([^"]+)"', canonical(advertised)
+                        )
+                    }
+                    self.assertEqual(set(advertised["$defs"]), references)
+                    expected = {name: full["$defs"][name] for name in references}
+                    self.assertEqual(advertised, {**full, "$defs": expected})
+                    Draft202012Validator.check_schema(advertised)
+
         writer = next(tool for tool in tools if tool["name"] == "record_memory")
-        self.assertEqual(writer["inputSchema"], schema_for("record_memory", "Input"))
-        self.assertEqual(writer["outputSchema"], schema_for("record_memory", "Output"))
+        reader = next(tool for tool in tools if tool["name"] == "search_memory")
+        write_schema = Draft202012Validator(writer["inputSchema"])
+        self.assertTrue(write_schema.is_valid(record()))
+        self.assertFalse(write_schema.is_valid({**record(), "unexpected": True}))
         ack = self.client.post("/v1/tools/record_memory", json=record(), headers=self.auth)
         self.assertEqual(ack.status_code, 200)
         query = dict(
@@ -178,6 +200,7 @@ class TransportTests(unittest.TestCase):
         result = response.json()["result"]
         self.assertFalse(result["isError"])
         self.assertEqual(result["content"], [])
+        Draft202012Validator(reader["outputSchema"]).validate(result["structuredContent"])
         self.assertEqual(result["structuredContent"]["data"]["items"][0]["statement"], "Use SQLite")
         denied = self.rpc("tools/call", {"name": "search_memory", "arguments": query}, token=READER)
         self.assertEqual(

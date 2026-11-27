@@ -84,14 +84,44 @@ _STRICT = validators.extend(  # type: ignore[no-untyped-call]  # Upstream factor
 )
 
 
-def schema_for(name: str, direction: str) -> dict[str, Any]:
+def _reachable_definitions(root: str, definitions: dict[str, Any]) -> dict[str, Any]:
+    """Follow the bundled registry's local references, including refs in arrays."""
+    reachable: dict[str, Any] = {}
+    prefix = "#/$defs/"
+
+    def visit(node: object) -> None:
+        if isinstance(node, dict):
+            if "$ref" in node:
+                reference = node["$ref"]
+                if not isinstance(reference, str) or not reference.startswith(prefix):
+                    raise ContractError("Expected a local contract definition reference")
+                target = reference.removeprefix(prefix)
+                if target not in reachable:
+                    reachable[target] = definitions[target]
+                    visit(reachable[target])
+            for value in node.values():
+                visit(value)
+        elif isinstance(node, list):
+            for item in node:
+                visit(item)
+
+    visit({"$ref": root})
+    return reachable
+
+
+def schema_for(name: str, direction: str, *, compact: bool = False) -> dict[str, Any]:
+    """Export a self-contained schema, optionally retaining only its referenced definitions."""
     if name not in CONTRACTS or direction not in ("Input", "Output"):
         raise ContractError("Unknown contract")
+    root = "#/$defs/" + name + direction
+    definitions = _REGISTRY["$defs"]
+    if compact:
+        definitions = _reachable_definitions(root, definitions)
     return {
         "$schema": _REGISTRY["$schema"],
         "type": "object",
-        "$ref": "#/$defs/" + name + direction,
-        "$defs": copy.deepcopy(_REGISTRY["$defs"]),
+        "$ref": root,
+        "$defs": copy.deepcopy(definitions),
     }
 
 

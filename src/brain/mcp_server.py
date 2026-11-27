@@ -28,8 +28,8 @@ def manager_for(
         types.Tool(
             name=name,
             description=description,
-            inputSchema=schema_for(name, "Input"),
-            outputSchema=schema_for(name, "Output"),
+            inputSchema=schema_for(name, "Input", compact=True),
+            outputSchema=schema_for(name, "Output", compact=True),
             annotations=types.ToolAnnotations(readOnlyHint=name in READ_TOOLS),
         )
         for name, description in TOOL_DESCRIPTIONS.items()
